@@ -342,10 +342,19 @@
     background:linear-gradient(135deg,var(--violet-mid),var(--violet-deep));
     border:1px solid rgba(255,255,255,.15);
     border-radius:14px; padding:2rem; flex:0 0 320px;
-    transition:border-color .3s,transform .2s;
+    transition:border-color .3s,transform .2s, box-shadow .3s;
     box-shadow:0 4px 24px rgba(132,77,251,.3);
+    /* Bords arrondis NETS pendant transform : combine plusieurs techniques */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);  /* Safari hack rounded corners */
+    isolation: isolate;
+    contain: layout paint;
+    /* PAS d'overflow:hidden ni de translateZ ici — ils CAUSENT le clipping iOS au lieu de l'éviter */
   }
-  .avis-card:hover { transform:translateY(-4px); box-shadow:0 8px 36px rgba(132,77,251,.45); }
+  .avis-card:hover, .avis-card:active {
+    transform: translateY(-4px);   /* simple translate, pas 3D = pas de subpixel iOS */
+    box-shadow:0 8px 36px rgba(132,77,251,.45);
+  }
   .avis-top { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; }
   .avis-avatar {
     width:44px; height:44px; border-radius:50%;
@@ -378,13 +387,16 @@
     user-select: none;
   }
   .avis-marquee-outer:active { cursor: grabbing; }
-  /* Fade horizontal via mask-image directement sur le track : transparent, sans bordure visible. */
+  /* Mask sur le OUTER (qui ne bouge pas), pas sur le track qui translate.
+     Sinon le fade de droite part hors-écran avec le track. */
+  .avis-marquee-outer {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+  }
   .avis-marquee-track {
     display:flex; gap:1.5rem; width:max-content;
     padding:0 .75rem;
     will-change: transform;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
-            mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
   }
 
   /* ── RÉSULTATS — violet plein ── */
@@ -517,15 +529,22 @@
     user-select: none;
   }
   .marquee-outer:active { cursor: grabbing; }
-  /* Fade horizontal via mask-image directement sur le track (pas d'overlay coloré) */
-  .marquee-track {
-    display:flex; align-items:center; gap:3rem; width:max-content; padding:0.5rem 0;
-    will-change: transform;
+  /* Mask sur l'OUTER (statique), pas sur le track qui translate */
+  .marquee-outer {
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
             mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
   }
-  .marquee-item { display:flex; align-items:center; flex-shrink:0; opacity:.55; transition:opacity .3s,transform .3s; }
-  .marquee-item:hover { opacity:1; transform:translateY(-2px); }
+  .marquee-track {
+    display:flex; align-items:center; gap:3rem; width:max-content; padding:0.5rem 0;
+    will-change: transform;
+  }
+  .marquee-item { display:flex; align-items:center; flex-shrink:0; opacity:.55; transition:opacity .3s,transform .3s; -webkit-tap-highlight-color: transparent; }
+  .marquee-item:hover, .marquee-item:active { opacity:1; transform:translateY(-2px); }
+  .marquee-item:hover .partner-img,
+  .marquee-item:active .partner-img { filter:grayscale(0%); }
+  /* Pendant le drag du slider, les items deviennent plus transparents */
+  .marquee-track.dragging .marquee-item { opacity: 0.25; transition: opacity .15s ease; }
+  .avis-marquee-track.dragging .avis-card { opacity: 0.6; transition: opacity .15s ease; }
   .partner-img { height:44px; width:auto; max-width:140px; display:block; object-fit:contain; filter:grayscale(15%); transition:filter .3s; }
   .marquee-item:hover .partner-img { filter:grayscale(0%); }
 
@@ -819,8 +838,11 @@
     .avis-google-badge { font-size:.75rem; padding:.4rem .8rem; }
 
     /* Marquee : pas de hover effect actif sur mobile */
-    .marquee-item:hover { opacity:.6; transform:none; }
-    .marquee-item:hover .partner-img { filter:grayscale(15%); }
+    /* Mobile : pas de hover effect (le hover sur touch est buggé) */
+    .marquee-item:hover { opacity:.55; transform:none; }
+    /* MAIS :active (tap) sur mobile montre le logo en couleur */
+    .marquee-item:active { opacity:1; transform:translateY(-2px); }
+    .marquee-item:active .partner-img { filter:grayscale(0%) !important; }
 
     /* ─────────── HEADER (mes règles actuelles inchangées) ─────────── */
     #header {
@@ -1284,6 +1306,7 @@ function setupSlider(outer, track, pxPerSec) {
     isInteracting = true;
     dragStartX = clientX;
     dragStartOffset = offset;
+    track.classList.add('dragging');  // dim items pendant le drag
   }
   function dragMove(clientX) {
     if (!isInteracting) return;
@@ -1293,6 +1316,7 @@ function setupSlider(outer, track, pxPerSec) {
   function dragEnd() {
     isInteracting = false;
     lastTime = null;  // reset timing pour reprise smooth
+    track.classList.remove('dragging');
   }
 
   // Touch (mobile)
