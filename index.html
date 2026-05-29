@@ -1371,10 +1371,9 @@ function scrollToSection(target) {
   const rect = target.getBoundingClientRect();
   const targetTop = rect.top + window.scrollY;
 
-  // Ratio adaptatif : 15% sur desktop (large), 25% sur mobile (étroit).
-  // Sur mobile la section "tombe" plus bas pour bien voir badge + titre centrés.
+  // Ratio adaptatif : 15% sur desktop (validé), 40% sur mobile pour vrai centrage vertical
   const isMobile = window.innerWidth < 992;
-  const offsetPercent = isMobile ? 0.25 : 0.15;
+  const offsetPercent = isMobile ? 0.40 : 0.15;
   const scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * offsetPercent;
 
   window.scrollTo({
