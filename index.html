@@ -370,16 +370,15 @@
 
   /* ── MARQUEE AVIS — défilement infini, ne s'arrête jamais ── */
   .avis-marquee-outer {
-    overflow-x: auto; overflow-y: hidden;
+    overflow: hidden;
     position:relative; width:100vw; margin-left:calc(-50vw + 50%);
     padding:2.5rem 0 3rem;
-    scrollbar-width: none;  /* Firefox */
-    -ms-overflow-style: none;  /* IE/Edge */
     cursor: grab;
-    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;  /* permet scroll vertical page, intercepte horizontal */
+    user-select: none;
   }
-  .avis-marquee-outer::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
   .avis-marquee-outer:active { cursor: grabbing; }
+  .avis-marquee-track { will-change: transform; }
   .avis-marquee-outer::before,
   .avis-marquee-outer::after { content:''; position:absolute; top:0; bottom:0; width:60px; z-index:2; pointer-events:none; }
   .avis-marquee-outer::before { left:0; background:linear-gradient(to right, rgba(249,249,249,0.95), transparent); }
@@ -513,15 +512,14 @@
   #partenaires { padding:4rem 0; border-top:1px solid rgba(132,77,251,.12); border-bottom:1px solid rgba(132,77,251,.12); }
   .partenaires-label { text-align:center; font-size:.75rem; letter-spacing:.15em; text-transform:uppercase; color:var(--violet-text); margin-bottom:2rem; }
   .marquee-outer {
-    overflow-x: auto; overflow-y: hidden;
+    overflow: hidden;
     position:relative; padding:1rem 0;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
     cursor: grab;
-    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    user-select: none;
   }
-  .marquee-outer::-webkit-scrollbar { display: none; }
   .marquee-outer:active { cursor: grabbing; }
+  .marquee-track { will-change: transform; }
   .marquee-outer::before,
   .marquee-outer::after { content:''; position:absolute; top:0; bottom:0; width:140px; z-index:2; pointer-events:none; }
   .marquee-outer::before { left:0; background:linear-gradient(to right,#F9F9F9,transparent); }
@@ -1245,67 +1243,101 @@ function handleOverlayClick(e){
   if(e.target===document.getElementById('mobileMenu')) closeMobileMenu();
 }
 
-// === SLIDERS AUTO-SCROLL avec contrôle au touch (version robuste) ===
-function setupAutoScrollSlider(outer, track, pxPerSec) {
+// === SLIDERS : auto-scroll par transform + drag custom (ultra robuste) ===
+function setupSlider(outer, track, pxPerSec) {
   if (!outer || !track) return;
-  let isInteracting = false;
+  let offset = 0;
   let lastTime = null;
+  let isInteracting = false;
+  let isHovering = false;
+  let dragStartX = 0;
+  let dragStartOffset = 0;
+
+  // Largeur d'un set (sur 3 dupliqués). On le recalcule régulièrement
+  // au cas où les images chargeraient en différé.
+  function getOneSet() {
+    return track.scrollWidth / 3 || 0;
+  }
+
+  function applyOffset() {
+    const oneSet = getOneSet();
+    if (oneSet > 0) {
+      // Modulo positif pour rester dans [0, oneSet)
+      offset = ((offset % oneSet) + oneSet) % oneSet;
+    }
+    track.style.transform = 'translateX(' + (-offset) + 'px)';
+  }
 
   function tick(now) {
     if (lastTime === null) lastTime = now;
-    const dt = now - lastTime;
+    const dt = Math.min(now - lastTime, 100);  // cap 100ms pour éviter saut si pause
     lastTime = now;
 
-    if (!isInteracting && !document.hidden) {
-      // Distance basée sur temps écoulé (smooth quelle que soit la framerate)
-      outer.scrollLeft += (pxPerSec * dt) / 1000;
-      // Boucle invisible : track contient 3 sets identiques, on saute 1 set
-      const oneSet = track.scrollWidth / 3;
-      if (oneSet > 0 && outer.scrollLeft >= oneSet * 2) {
-        outer.scrollLeft -= oneSet;
-      }
+    if (!isInteracting && !isHovering && !document.hidden) {
+      offset += (pxPerSec * dt) / 1000;
+      applyOffset();
     }
     requestAnimationFrame(tick);
   }
 
-  // Pointer events = mouse + touch unifiés
-  const startInteract = () => { isInteracting = true; lastTime = null; };
-  const endInteract = () => { isInteracting = false; lastTime = null; };
-
-  if (window.PointerEvent) {
-    outer.addEventListener('pointerdown', startInteract);
-    outer.addEventListener('pointerup', endInteract);
-    outer.addEventListener('pointercancel', endInteract);
-    outer.addEventListener('pointerleave', endInteract);
-  } else {
-    outer.addEventListener('touchstart', startInteract, { passive: true });
-    outer.addEventListener('touchend', endInteract, { passive: true });
-    outer.addEventListener('mousedown', startInteract);
-    outer.addEventListener('mouseup', endInteract);
-    outer.addEventListener('mouseleave', endInteract);
+  // === Drag handlers (mouse + touch unifiés via pointer events si dispo) ===
+  function dragStart(clientX) {
+    isInteracting = true;
+    dragStartX = clientX;
+    dragStartOffset = offset;
   }
-  // Hover desktop = pause
-  outer.addEventListener('mouseenter', startInteract);
+  function dragMove(clientX) {
+    if (!isInteracting) return;
+    offset = dragStartOffset - (clientX - dragStartX);
+    applyOffset();
+  }
+  function dragEnd() {
+    isInteracting = false;
+    lastTime = null;  // reset timing pour reprise smooth
+  }
 
-  // Démarrer après que le layout soit calculé (track width)
+  // Touch (mobile)
+  outer.addEventListener('touchstart', function(e) {
+    dragStart(e.touches[0].clientX);
+  }, { passive: true });
+  outer.addEventListener('touchmove', function(e) {
+    dragMove(e.touches[0].clientX);
+  }, { passive: true });
+  outer.addEventListener('touchend', dragEnd);
+  outer.addEventListener('touchcancel', dragEnd);
+
+  // Mouse (desktop)
+  outer.addEventListener('mousedown', function(e) {
+    dragStart(e.clientX);
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (isInteracting) dragMove(e.clientX);
+  });
+  window.addEventListener('mouseup', dragEnd);
+
+  // Hover desktop = pause (mais pas drag)
+  outer.addEventListener('mouseenter', function() { isHovering = true; lastTime = null; });
+  outer.addEventListener('mouseleave', function() { isHovering = false; dragEnd(); });
+
   requestAnimationFrame(tick);
 }
 
-// Init quand le DOM est prêt (track.scrollWidth bien calculé)
+// Init après chargement complet (images dimensionnées)
 function initSliders() {
-  document.querySelectorAll('.avis-marquee-outer').forEach(outer => {
+  document.querySelectorAll('.avis-marquee-outer').forEach(function(outer) {
     const track = outer.querySelector('.avis-marquee-track');
-    setupAutoScrollSlider(outer, track, 30);  // 30 px/s
+    setupSlider(outer, track, 35);  // ~35 px/s
   });
-  document.querySelectorAll('.marquee-outer').forEach(outer => {
+  document.querySelectorAll('.marquee-outer').forEach(function(outer) {
     const track = outer.querySelector('.marquee-track');
-    setupAutoScrollSlider(outer, track, 42);  // 42 px/s pour partenaires
+    setupSlider(outer, track, 50);  // ~50 px/s
   });
 }
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSliders);
-} else {
+if (document.readyState === 'complete') {
   initSliders();
+} else {
+  window.addEventListener('load', initSliders);
 }
 
 // === SMOOTH SCROLL avec positionnement vertical optimisé ===
@@ -1319,7 +1351,7 @@ function scrollToSection(target) {
   const targetTop = target.getBoundingClientRect().top + window.scrollY;
   // Section commence à ~12% sous le header (laisse la section précédente peeker en haut,
   // et place le titre de la nouvelle section vers le milieu-haut du viewport)
-  const offset = headerHeight + (viewportHeight - headerHeight) * 0.20;
+  const offset = headerHeight + (viewportHeight - headerHeight) * 0.30;
   window.scrollTo({
     top: Math.max(0, targetTop - offset),
     behavior: 'smooth'
