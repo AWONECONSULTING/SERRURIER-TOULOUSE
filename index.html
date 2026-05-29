@@ -1371,9 +1371,11 @@ function scrollToSection(target) {
   const rect = target.getBoundingClientRect();
   const targetTop = rect.top + window.scrollY;
 
-  // Place le HAUT de la section pile au CENTRE de l'écran (50% du viewport).
-  // Marche sur ordi, tablette, mobile sans aucune adaptation : c'est mathématique.
-  const scrollTarget = targetTop - viewportHeight / 2;
+  // Place le HAUT de la section à 15% de la zone visible sous le header.
+  // Résultat visuel : badge/titre apparaissent dans le tiers supérieur,
+  // espace doux au-dessus, contenu visible en dessous.
+  // S'adapte à toutes les tailles d'écran proportionnellement.
+  const scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * 0.15;
 
   window.scrollTo({
     top: Math.max(0, scrollTarget),
