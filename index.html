@@ -1373,12 +1373,11 @@ function scrollToSection(target) {
   let scrollTarget;
   if (isMobile) {
     // SUR MOBILE : on cible le BADGE (section-tag) ou le 1er élément de contenu
-    // et on le place à ~20% du haut du viewport.
-    // Comme ça : badge à 20%, titre à 28%, contenu visible jusqu'en bas du viewport.
+    // et on le place à 25% du haut du viewport.
     const anchor = target.querySelector('.section-tag, .section-title, h1, h2') || target;
     const anchorRect = anchor.getBoundingClientRect();
     const anchorTop = anchorRect.top + window.scrollY;
-    scrollTarget = anchorTop - viewportHeight * 0.20;
+    scrollTarget = anchorTop - viewportHeight * 0.25;
   } else {
     // SUR DESKTOP : conserve le 15% sous header (validé par toi)
     const rect = target.getBoundingClientRect();
