@@ -378,15 +378,13 @@
     user-select: none;
   }
   .avis-marquee-outer:active { cursor: grabbing; }
-  .avis-marquee-track { will-change: transform; }
-  .avis-marquee-outer::before,
-  .avis-marquee-outer::after { content:''; position:absolute; top:0; bottom:0; width:60px; z-index:2; pointer-events:none; }
-  .avis-marquee-outer::before { left:0; background:linear-gradient(to right, rgba(249,249,249,0.95), transparent); }
-  .avis-marquee-outer::after  { right:0; background:linear-gradient(to left, rgba(249,249,249,0.95), transparent); }
+  /* Fade horizontal via mask-image directement sur le track : transparent, sans bordure visible. */
   .avis-marquee-track {
     display:flex; gap:1.5rem; width:max-content;
     padding:0 .75rem;
-    will-change: scroll-position;
+    will-change: transform;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
   }
 
   /* ── RÉSULTATS — violet plein ── */
@@ -519,12 +517,13 @@
     user-select: none;
   }
   .marquee-outer:active { cursor: grabbing; }
-  .marquee-track { will-change: transform; }
-  .marquee-outer::before,
-  .marquee-outer::after { content:''; position:absolute; top:0; bottom:0; width:140px; z-index:2; pointer-events:none; }
-  .marquee-outer::before { left:0; background:linear-gradient(to right,#F9F9F9,transparent); }
-  .marquee-outer::after  { right:0; background:linear-gradient(to left,#F9F9F9,transparent); }
-  .marquee-track { display:flex; align-items:center; gap:3rem; width:max-content; padding:0.5rem 0; will-change: scroll-position; }
+  /* Fade horizontal via mask-image directement sur le track (pas d'overlay coloré) */
+  .marquee-track {
+    display:flex; align-items:center; gap:3rem; width:max-content; padding:0.5rem 0;
+    will-change: transform;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+  }
   .marquee-item { display:flex; align-items:center; flex-shrink:0; opacity:.55; transition:opacity .3s,transform .3s; }
   .marquee-item:hover { opacity:1; transform:translateY(-2px); }
   .partner-img { height:44px; width:auto; max-width:140px; display:block; object-fit:contain; filter:grayscale(15%); transition:filter .3s; }
