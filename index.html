@@ -1368,13 +1368,23 @@ function scrollToSection(target) {
   const header = document.getElementById('header');
   const headerHeight = header ? header.offsetHeight : 80;
   const viewportHeight = window.innerHeight;
-  const rect = target.getBoundingClientRect();
-  const targetTop = rect.top + window.scrollY;
-
-  // Ratio adaptatif : 15% sur desktop (validé), 40% sur mobile pour vrai centrage vertical
   const isMobile = window.innerWidth < 992;
-  const offsetPercent = isMobile ? 0.40 : 0.15;
-  const scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * offsetPercent;
+
+  let scrollTarget;
+  if (isMobile) {
+    // SUR MOBILE : trouve le titre de la section et le place PILE au milieu vertical de l'écran
+    const title = target.querySelector('.section-title, h1, h2') || target;
+    const titleRect = title.getBoundingClientRect();
+    const titleTop = titleRect.top + window.scrollY;
+    const titleHeight = titleRect.height;
+    // Centre du titre = centre du viewport
+    scrollTarget = titleTop + (titleHeight / 2) - (viewportHeight / 2);
+  } else {
+    // SUR DESKTOP : conserve le 15% sous header (validé par toi)
+    const rect = target.getBoundingClientRect();
+    const targetTop = rect.top + window.scrollY;
+    scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * 0.15;
+  }
 
   window.scrollTo({
     top: Math.max(0, scrollTarget),
