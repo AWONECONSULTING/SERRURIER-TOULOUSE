@@ -539,12 +539,11 @@
     will-change: transform;
   }
   .marquee-item { display:flex; align-items:center; flex-shrink:0; opacity:.55; transition:opacity .3s,transform .3s; -webkit-tap-highlight-color: transparent; }
+  /* Au hover/tap : couleur pleine + léger lift. Pas d'effet pendant le drag. */
   .marquee-item:hover, .marquee-item:active { opacity:1; transform:translateY(-2px); }
   .marquee-item:hover .partner-img,
   .marquee-item:active .partner-img { filter:grayscale(0%); }
-  /* Pendant le drag du slider, les items deviennent plus transparents */
-  .marquee-track.dragging .marquee-item { opacity: 0.25; transition: opacity .15s ease; }
-  .avis-marquee-track.dragging .avis-card { opacity: 0.6; transition: opacity .15s ease; }
+  /* Section avis : aucun changement de couleur au drag (laisse les cartes telles quelles) */
   .partner-img { height:44px; width:auto; max-width:140px; display:block; object-fit:contain; filter:grayscale(15%); transition:filter .3s; }
   .marquee-item:hover .partner-img { filter:grayscale(0%); }
 
@@ -838,10 +837,10 @@
     .avis-google-badge { font-size:.75rem; padding:.4rem .8rem; }
 
     /* Marquee : pas de hover effect actif sur mobile */
-    /* Mobile : pas de hover effect (le hover sur touch est buggé) */
+    /* Mobile : :hover désactivé (sticky sur touch). Seul :active fait l'effet. */
     .marquee-item:hover { opacity:.55; transform:none; }
-    /* MAIS :active (tap) sur mobile montre le logo en couleur */
-    .marquee-item:active { opacity:1; transform:translateY(-2px); }
+    .marquee-item:hover .partner-img { filter:grayscale(15%); }
+    .marquee-item:active { opacity:1 !important; transform:translateY(-2px) !important; }
     .marquee-item:active .partner-img { filter:grayscale(0%) !important; }
 
     /* ─────────── HEADER (mes règles actuelles inchangées) ─────────── */
@@ -1301,12 +1300,11 @@ function setupSlider(outer, track, pxPerSec) {
     requestAnimationFrame(tick);
   }
 
-  // === Drag handlers (mouse + touch unifiés via pointer events si dispo) ===
+  // === Drag handlers (mouse + touch unifiés) ===
   function dragStart(clientX) {
     isInteracting = true;
     dragStartX = clientX;
     dragStartOffset = offset;
-    track.classList.add('dragging');  // dim items pendant le drag
   }
   function dragMove(clientX) {
     if (!isInteracting) return;
@@ -1316,7 +1314,6 @@ function setupSlider(outer, track, pxPerSec) {
   function dragEnd() {
     isInteracting = false;
     lastTime = null;  // reset timing pour reprise smooth
-    track.classList.remove('dragging');
   }
 
   // Touch (mobile)
@@ -1374,7 +1371,7 @@ function scrollToSection(target) {
   const targetTop = target.getBoundingClientRect().top + window.scrollY;
   // Section commence à ~12% sous le header (laisse la section précédente peeker en haut,
   // et place le titre de la nouvelle section vers le milieu-haut du viewport)
-  const offset = headerHeight + (viewportHeight - headerHeight) * 0.30;
+  const offset = headerHeight + (viewportHeight - headerHeight) * 0.45;
   window.scrollTo({
     top: Math.max(0, targetTop - offset),
     behavior: 'smooth'
