@@ -1371,10 +1371,9 @@ function scrollToSection(target) {
   const rect = target.getBoundingClientRect();
   const targetTop = rect.top + window.scrollY;
 
-  // Place le HAUT de la section au CENTRE EXACT de la zone visible sous le header.
-  // S'adapte automatiquement à toute taille d'écran (ordi, tablette, mobile).
-  // Formule : centre vertical = (headerHeight + viewportHeight) / 2
-  const scrollTarget = targetTop - (headerHeight + viewportHeight) / 2;
+  // Place le HAUT de la section pile au CENTRE de l'écran (50% du viewport).
+  // Marche sur ordi, tablette, mobile sans aucune adaptation : c'est mathématique.
+  const scrollTarget = targetTop - viewportHeight / 2;
 
   window.scrollTo({
     top: Math.max(0, scrollTarget),
