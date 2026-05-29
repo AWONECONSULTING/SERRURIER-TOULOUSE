@@ -1371,11 +1371,11 @@ function scrollToSection(target) {
   const rect = target.getBoundingClientRect();
   const targetTop = rect.top + window.scrollY;
 
-  // Place le HAUT de la section à 15% de la zone visible sous le header.
-  // Résultat visuel : badge/titre apparaissent dans le tiers supérieur,
-  // espace doux au-dessus, contenu visible en dessous.
-  // S'adapte à toutes les tailles d'écran proportionnellement.
-  const scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * 0.15;
+  // Ratio adaptatif : 15% sur desktop (large), 25% sur mobile (étroit).
+  // Sur mobile la section "tombe" plus bas pour bien voir badge + titre centrés.
+  const isMobile = window.innerWidth < 992;
+  const offsetPercent = isMobile ? 0.25 : 0.15;
+  const scrollTarget = targetTop - headerHeight - (viewportHeight - headerHeight) * offsetPercent;
 
   window.scrollTo({
     top: Math.max(0, scrollTarget),
